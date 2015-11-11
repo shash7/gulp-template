@@ -12,14 +12,17 @@
 
 
 /* ----------------------------------------------------------------
- * $tasks
+ * $requires
  * ---------------------------------------------------------------- */
 var gulp         = require('gulp');
 var less         = require('gulp-less');
+var inject       = require('gulp-inject');
 var notify       = require('gulp-notify');
 var rename       = require("gulp-rename");
 var plumber      = require('gulp-plumber');
 var autoprefixer = require('gulp-autoprefixer');
+var wiredep      = require('wiredep').stream;
+var config       = require('./gulpConfig.json');
 
 
 /* ----------------------------------------------------------------
@@ -45,37 +48,83 @@ var opts = {
  * ---------------------------------------------------------------- */
 // Compiles less files
 gulp.task('less', function() {
-	return gulp.src(opts.less.main)
-		.pipe(plumber({
-			errorHandler: function (err) {
-				//notify(JSON.stringify(err));
-				console.log(JSON.stringify(err));
-				this.emit('end');
-			}
-		}))
+	var onError = function(err) {
+		notify.onError({
+			title:    "Gulp",
+			subtitle: "Failure!",
+			message:  "Error: <%= error.message %>",
+			sound:    "Beep"
+		})(err);
+
+		this.emit('end');
+	};
+	return gulp.src(config.less.main)
+		.pipe(plumber({errorHandler: onError}))
 		.pipe(less())
 		.pipe(autoprefixer({
 			browsers: opts.autoprefixer
 		}))
 		.pipe(rename(function (path) {
-			if(opts.less.output) {
-				var fileName = opts.less.output.split('.');
+			if(config.less.output) {
+				var fileName = config.less.output.split('.');
 				path.basename = fileName[0];
 				path.extname = '.' + fileName[1];
 			}
 		}))
-		.pipe(gulp.dest(opts.less.dest))
+		.pipe(gulp.dest(config.less.dest))
 		.pipe(notify('Compiled <%= file.relative %>'));
 });
 
 // Watches directories and/or files
 gulp.task('watch', function() {
-	gulp.watch(opts.less.path, ['less']);
+	gulp.watch(config.less.path, ['less']);
 });
 
 gulp.task('init', function() {
 	notify('Gulp started');
 });
 
+gulp.task('buildHtml', function() {
+	var onError = function(err) {
+		notify.onError({
+			title:    "Gulp",
+			subtitle: "Failure!",
+			message:  "Error: <%= error.message %>",
+			sound:    "Beep"
+		})(err);
+
+		this.emit('end');
+	};
+	gulp.src(config.html.main)
+		.pipe(plumber({errorHandler: onError}))
+		.pipe(notify('Injecting scripts in ' + config.html.main))
+		.pipe(wiredep({
+			devDependencies: true,
+			directory: './bower_components',
+			bowerJson: require('./bower.json'),
+			overrides : {
+/*				'Sortable' : {
+					'main' : ['Sortable.js']
+				}*/
+			},
+			onError : onError
+		}))
+		.pipe(inject(gulp.src(config.js.path), {
+		 	read     : false,
+			relative : true
+		}))
+		.pipe(inject(gulp.src(config.css.path), {
+		 	read     : false,
+			relative : true
+		}))
+		.pipe(gulp.dest(__dirname + '/'));
+});
+
 // Default task
 gulp.task('default', ['init', 'less', 'watch']);
+
+/*
+ * Build task
+ * Sets scripts inside html using wiredep
+ */
+gulp.task('build',['buildHtml'])

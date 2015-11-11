@@ -1,0 +1,24 @@
+{
+	"options" : {
+		"autoprefixer" : ["last 8 versions"]
+	},
+	"less" : {
+		"output": "main.css",
+		"main"  : "less/lightgrid.less",
+		"dest"  : "css",
+		"path"  : [
+			"less/*.less"
+		]
+	},
+	"css" : {
+		"path" : "css/*.css"
+	},
+	"js" : {
+		"path" : [
+			"js/*.js"
+		]
+	},
+	"html" : {
+		"main" : "index.html"
+	}
+}
